@@ -1,0 +1,78 @@
+import torch
+from torch.autograd import Variable
+from torch import nn, optim
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from activation_max.model import MNIST_DNN
+from utils.utils import set_parameters_static
+from utils.utils import get_img_means
+
+lmda = 0.1
+
+class Prototype(nn.Module):
+    def __init__(self):
+        super(Prototype, self).__init__()
+
+
+criterion = nn.CrossEntropyLoss()
+regular = nn.MSELoss()
+
+model = MNIST_DNN()
+if torch.cuda.is_available():
+    model = model.cuda()
+
+model.load_state_dict(torch.load('MNIST_CNN.pkl'))
+# don't update parameters of original model
+model = set_parameters_static(model)
+
+# init images and labels:0-9
+x_prototype = torch.zeros(10, 784)
+y_prototype = torch.linspace(0, 9, 10)
+y_prototype = y_prototype.type(torch.LongTensor)
+if torch.cuda.is_available():
+    x_prototype = Variable(x_prototype, requires_grad=True).cuda()
+    y_prototype = Variable(y_prototype).cuda()
+else:
+    x_prototype = Variable(x_prototype, requires_grad=True)
+    y_prototype = Variable(y_prototype)
+
+imgs_means = get_img_means()
+if torch.cuda.is_available():
+    imgs_means = Variable(imgs_means).cuda()
+else:
+    imgs_means = Variable(imgs_means)
+
+# pred = model(imgs_means)
+# print(np.argmax(pred.data.numpy(), axis=1))
+
+# optimizer = optim.SGD(filter(lambda p:p.requires_grad, model.parameters()), lr=0.01, momentum=0.9)
+
+optimizer = optim.SGD([x_prototype], lr=0.001, momentum=0.9)
+
+for i in range(1000000):
+    logits_prototype = model(x_prototype)
+    cost_protype = criterion(logits_prototype, y_prototype) + lmda * regular(x_prototype, imgs_means)
+    optimizer.zero_grad()
+    cost_protype.backward()
+    optimizer.step()
+    if i % 5000 == 0:
+        print('cost_protype={:.6f}'.format(cost_protype.data.numpy()[0]))
+
+x_prototype = x_prototype.data.numpy()
+assert x_prototype.shape == (10, 784)
+plt.figure(figsize=(7, 7))
+for i in range(5):
+    left = x_prototype[2*i,:].reshape(28, 28)
+    plt.subplot(5, 2, 2 * i +1)
+    plt.imshow(left, cmap='gray', interpolation='none')
+    plt.title('Digit:{}'.format(2 * i))
+
+    right = x_prototype[2*i+1,:].reshape(28, 28)
+    plt.subplot(5, 2, 2 * i + 2)
+    plt.imshow(right, cmap='gray', interpolation='none')
+    plt.title('Digit:{}'.format(2 * i + 1))
+
+plt.tight_layout()
+plt.show()
