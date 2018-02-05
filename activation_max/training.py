@@ -84,3 +84,5 @@ for epoch in range(epochs):
     print('Test Loss: {:.6f}, Acc: {:.6f}'.format(eval_loss/len(test_mnist), eval_acc/len(test_mnist)))
 
 torch.save(model.state_dict(), 'MNIST_CNN.pkl')
+
+# best result :Test Loss: 0.008280, Acc: 0.924300
