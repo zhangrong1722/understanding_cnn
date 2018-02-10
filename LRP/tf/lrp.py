@@ -17,12 +17,11 @@ class MNIST_DNN:
             if reuse:
                 scope.reuse_variables()
 
-            dense1 = tf.layers.dense(inputs=X, units=512, activation=tf.nn.relu, use_bias=True)
-            dense2 = tf.layers.dense(inputs=dense1, units=128, activation=tf.nn.relu, use_bias=True)
-            logits = tf.layers.dense(inputs=dense2, units=10, activation=None, use_bias=True)
+            dense1 = tf.layers.dense(inputs=X, units=300, activation=tf.nn.relu, use_bias=True)
+            logits = tf.layers.dense(inputs=dense1, units=10, activation=None, use_bias=True)
             prediction = tf.nn.softmax(logits)
 
-        return [dense1, dense2, prediction], logits
+        return [dense1, prediction], logits
 
     @property
     def vars(self):
@@ -50,21 +49,26 @@ class LRP:
             Rs = []
             j = 0
             for i in range(len(self.activations) - 1):
-
                 if i is 0:
                     Rs.append(self.activations[i][:, logit, None])
                     Rs.append(self.backprop_dense(self.activations[i + 1], self.weights[j][:, logit, None],
                                                   self.biases[j][logit, None], Rs[-1]))
                     j += 1
-
                     continue
-
                 elif 'dense' in self.activations[i].name.lower():
+                    # self.activatios[i+1]:(None,784)
+                    # self.weights[j]:(784,300)
+                    # self.biases[j]:(300)
+                    # Rs[-1]:(1,300)
                     Rs.append(self.backprop_dense(self.activations[i + 1], self.weights[j], self.biases[j], Rs[-1]))
                     j += 1
+                    print('index=',i)
+
             return Rs[-1]
 
     def backprop_dense(self, activation, kernel, bias, relevance):
+       # activation: (1,300) relevance:(1,1)
+       # kernel:(300,1) bias:(1,1)
         W_p = tf.maximum(0., kernel)
         b_p = tf.maximum(0., bias)
         z_p = tf.matmul(activation, W_p) + b_p
@@ -186,3 +190,4 @@ def display_lrp():
 if __name__ == '__main__':
     display_lrp()
     # training()
+    pass
