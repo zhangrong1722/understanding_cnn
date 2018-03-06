@@ -49,18 +49,19 @@ else:
 
 # optimizer = optim.SGD(filter(lambda p:p.requires_grad, model.parameters()), lr=0.01, momentum=0.9)
 
-optimizer = optim.SGD([x_prototype], lr=0.001, momentum=0.9)
-
-for i in range(1000000):
+for i in range(5000):
     logits_prototype = model(x_prototype)
     cost_protype = criterion(logits_prototype, y_prototype) + lmda * regular(x_prototype, imgs_means)
+    optimizer = optim.Adam([x_prototype], lr=0.001)
+
     optimizer.zero_grad()
     cost_protype.backward()
     optimizer.step()
-    if i % 5000 == 0:
+    if i % 500 == 0:
         print('cost_protype={:.6f}'.format(cost_protype.data.numpy()[0]))
 
 x_prototype = x_prototype.data.numpy()
+
 assert x_prototype.shape == (10, 784)
 plt.figure(figsize=(7, 7))
 for i in range(5):
@@ -68,11 +69,13 @@ for i in range(5):
     plt.subplot(5, 2, 2 * i +1)
     plt.imshow(left, cmap='gray', interpolation='none')
     plt.title('Digit:{}'.format(2 * i))
+    plt.colorbar()
 
     right = x_prototype[2*i+1,:].reshape(28, 28)
     plt.subplot(5, 2, 2 * i + 2)
     plt.imshow(right, cmap='gray', interpolation='none')
     plt.title('Digit:{}'.format(2 * i + 1))
+    plt.colorbar()
 
 plt.tight_layout()
 plt.show()
